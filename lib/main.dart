@@ -1,9 +1,16 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:moovies/constants.dart';
+import 'package:moovies/firebase_options.dart';
 import 'package:moovies/providers.dart';
 import 'package:moovies/splash.dart';
 import 'package:provider/provider.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(MultiProvider(providers: [
     ChangeNotifierProvider<MoovieProvider>(
       create: (_) => MoovieProvider(),
@@ -21,7 +28,7 @@ class MyApp extends StatelessWidget {
       title: 'Moovies',
       debugShowCheckedModeBanner: false,
       theme: CupertinoThemeData(
-        primaryColor: CupertinoColors.activeOrange,
+        primaryColor: lightColor,
       ),
       home: Splash(),
     );

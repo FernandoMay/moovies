@@ -56,6 +56,7 @@ class Moovie {
     required this.video,
     required this.voteAverage,
     required this.voteCount,
+    this.favorite,
   });
 
   bool adult;
@@ -72,6 +73,7 @@ class Moovie {
   bool video;
   double voteAverage;
   int voteCount;
+  bool? favorite = false;
 
   factory Moovie.fromJson(Map<String, dynamic> json) => Moovie(
         adult: json["adult"],
@@ -89,6 +91,7 @@ class Moovie {
         video: json["video"],
         voteAverage: json["vote_average"]?.toDouble(),
         voteCount: json["vote_count"],
+        favorite: json['favorite'] ?? false,
       );
 
   Map<String, dynamic> toJson() => {
@@ -107,6 +110,43 @@ class Moovie {
         "video": video,
         "vote_average": voteAverage,
         "vote_count": voteCount,
+        "favorite": favorite ?? false,
+      };
+}
+
+class FMoovie {
+  FMoovie({
+    required this.id,
+    required this.title,
+    required this.overview,
+    required this.posterPath,
+    required this.releaseYear,
+    required this.favorite,
+  });
+
+  int id;
+  String overview;
+  String posterPath;
+  int releaseYear;
+  String title;
+  bool favorite;
+
+  factory FMoovie.fromJson(Map<String, dynamic> json) => FMoovie(
+        id: json["id"],
+        overview: json["overview"],
+        posterPath: json['poster_path'],
+        releaseYear: json["release_year"],
+        title: json["title"],
+        favorite: json['favorite'],
+      );
+
+  Map<String, dynamic> toJson() => {
+        "id": id,
+        "overview": overview,
+        "poster_path": posterPath,
+        "release_year": releaseYear,
+        "title": title,
+        "favorite": favorite,
       };
 }
 

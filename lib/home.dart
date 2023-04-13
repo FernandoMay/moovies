@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:moovies/constants.dart';
 import 'package:moovies/models.dart';
@@ -47,6 +48,14 @@ class _HomeState extends State<Home> {
   }
 }
 
+final favRef =
+    FirebaseFirestore.instance.collection('favmoovies').withConverter<FMoovie>(
+          fromFirestore: (snapshots, _) => FMoovie.fromJson(snapshots.data()!),
+          toFirestore: (FMoovie, _) => FMoovie.toJson(),
+        );
+final userFavRef =
+    FirebaseFirestore.instance.collection('favmoovies').doc('userFavs');
+
 class Homie extends StatefulWidget {
   const Homie({super.key});
 
@@ -76,25 +85,28 @@ class _HomieState extends State<Homie> {
           middle: Text('Moovies', style: tsH2White),
           backgroundColor: bgColor,
         ),
-        child: PageView.builder(
-          controller: _pageController,
-          scrollDirection: Axis.vertical,
-          itemBuilder: (context, index) {
-            if (index == _currentPageIndex.floor()) {
-              return Transform(
-                  transform: Matrix4.identity()
-                    ..rotateX(_currentPageIndex.toDouble() - index),
-                  child: MovieTile(movie: data.moovies[index]));
-            } else if (index == _currentPageIndex.floor() + 1) {
-              return Transform(
-                  transform: Matrix4.identity()
-                    ..rotateX(_currentPageIndex.toDouble() - index),
-                  child: MovieTile(movie: data.moovies[index]));
-            } else {
-              return MovieTile(movie: data.moovies[index]);
-            }
-          },
-          itemCount: data.moovies.length,
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: PageView.builder(
+            controller: _pageController,
+            scrollDirection: Axis.vertical,
+            itemBuilder: (context, index) {
+              if (index == _currentPageIndex.floor()) {
+                return Transform(
+                    transform: Matrix4.identity()
+                      ..rotateX(_currentPageIndex.toDouble() - index),
+                    child: MovieTile(movie: data.moovies[index]));
+              } else if (index == _currentPageIndex.floor() + 1) {
+                return Transform(
+                    transform: Matrix4.identity()
+                      ..rotateX(_currentPageIndex.toDouble() - index),
+                    child: MovieTile(movie: data.moovies[index]));
+              } else {
+                return MovieTile(movie: data.moovies[index]);
+              }
+            },
+            itemCount: data.moovies.length,
+          ),
         )
         // Expanded(
         // child:
@@ -137,8 +149,44 @@ class Watchlist extends StatefulWidget {
 
 class _WatchlistState extends State<Watchlist> {
   @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return const Placeholder();
+    return CupertinoPageScaffold(
+      backgroundColor: bgColor,
+      navigationBar: const CupertinoNavigationBar(
+        middle: Text('Favs', style: tsH2White),
+        backgroundColor: bgColor,
+      ),
+      child: StreamBuilder<QuerySnapshot<FMoovie>>(
+        stream: favRef.where('favorite').snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(
+              child: Text(snapshot.error.toString()),
+            );
+          }
+          if (!snapshot.hasData) {
+            return const Center(child: CupertinoActivityIndicator());
+          }
+          final data = snapshot.requireData;
+          return ListView.builder(
+            scrollDirection: Axis.vertical,
+            itemCount: data.size,
+            shrinkWrap: true,
+            itemBuilder: (context, index) {
+              return FavsTile(
+                data: data.docs[index].data(),
+                reference: data.docs[index].reference,
+              );
+            },
+          );
+        },
+      ),
+    );
   }
 }
 
@@ -210,21 +258,151 @@ class _MovieTileState extends State<MovieTile> {
             child: Padding(
               padding:
                   const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    widget.movie.releaseDate.year.toString(),
-                    style: tsH2Black,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.movie.releaseDate.year.toString(),
+                        style: tsH2Black,
+                      ),
+                      Text(
+                        widget.movie.title,
+                        style: tsH3Black,
+                      ),
+                    ],
                   ),
-                  Text(
-                    widget.movie.title,
-                    style: tsH3Black,
-                  ),
+                  CupertinoButton(
+                      child: Icon(_isActive
+                          ? CupertinoIcons.heart_fill
+                          : CupertinoIcons.heart),
+                      onPressed: () {
+                        setState(() {
+                          !_isActive;
+                        });
+                        FMoovie fmoovie = FMoovie(
+                            id: widget.movie.id,
+                            title: widget.movie.originalTitle,
+                            overview: widget.movie.overview,
+                            posterPath: widget.movie.posterPath,
+                            releaseYear: widget.movie.releaseDate.year,
+                            favorite: _isActive);
+                        favRef.doc("moovies").set(fmoovie).onError(
+                            (e, _) => Exception("Error writing document: $e"));
+                        final data = {
+                          "favs": FieldValue.arrayUnion([widget.movie.id])
+                        };
+                        userFavRef.update(data).onError(
+                            (e, _) => Exception("Error writing document: $e"));
+                      })
                 ],
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class FavsTile extends StatefulWidget {
+  const FavsTile({super.key, required this.data, required this.reference});
+
+  final FMoovie data;
+  final DocumentReference<FMoovie> reference;
+
+  @override
+  State<FavsTile> createState() => _FavsTileState();
+}
+
+class _FavsTileState extends State<FavsTile> {
+  @override
+  Widget build(BuildContext context) {
+    Size size = MediaQuery.of(context).size;
+    return Container(
+      color: greyLightColor,
+      width: size.width,
+      padding: const EdgeInsets.symmetric(
+        horizontal: 4.0,
+        vertical: 8.0,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          ClipRRect(
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(8.0),
+              topRight: Radius.circular(8.0),
+              bottomLeft: Radius.circular(8.0),
+            ),
+            child: SizedBox(
+              width: size.width * 0.38,
+              height: size.height * 0.24,
+              child: Image.network(
+                widget.data.posterPath,
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+          Container(
+            width: size.width * 0.57,
+            decoration: const BoxDecoration(
+              color: bgColor,
+              borderRadius: BorderRadius.only(
+                topRight: Radius.circular(8.0),
+                bottomRight: Radius.circular(8.0),
+              ),
+            ),
+            padding: const EdgeInsets.only(
+              bottom: 16.0,
+              // top: 10.0,
+              left: 14.0,
+              right: 8.0,
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const SizedBox(width: 4.0),
+                    CupertinoButton(
+                      onPressed: () {
+                        final data = {
+                          "favs": FieldValue.arrayRemove([widget.data.id])
+                        };
+                        userFavRef.update(data).onError(
+                            (e, _) => Exception("Error writing document: $e"));
+                      },
+                      child: const Icon(CupertinoIcons.heart_slash_fill,
+                          size: 17.0, color: lightColor),
+                    ),
+                  ],
+                ),
+                Text(
+                  widget.data.releaseYear.toString(),
+                  style: tsH2Black,
+                ),
+                Text(
+                  widget.data.title,
+                  style: tsH3Black,
+                ),
+                Text(
+                  widget.data.overview,
+                  maxLines: 4,
+                  softWrap: true,
+                  style: tsH1Black,
+                ),
+                const SizedBox(
+                  height: 4.0,
+                ),
+              ],
+            ),
+          )
         ],
       ),
     );
