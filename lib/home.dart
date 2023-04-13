@@ -1,5 +1,8 @@
 import 'package:flutter/cupertino.dart';
+import 'package:moovies/constants.dart';
 import 'package:moovies/models.dart';
+import 'package:moovies/providers.dart';
+import 'package:provider/provider.dart';
 
 class Home extends StatefulWidget {
   const Home({Key? key}) : super(key: key);
@@ -9,73 +12,114 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
-  final PageController _pageController = PageController(viewportFraction: 0.9);
-  late Future<List<Moovie>> _movies;
-  int _currentPageIndex = 0;
+  final List<Widget> _tabs = [
+    const Homie(),
+    const Watchlist(),
+  ];
 
   @override
   void initState() {
-    _movies = Moovies.getPopularMovies();
-    super.initState(); // Obtener las películas desde la API
+    super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
-    return CupertinoPageScaffold(
-      navigationBar: const CupertinoNavigationBar(
-        // leading: Center(
-        //   child: CupertinoButton(
-        //     child: const Icon(CupertinoIcons.refresh_circled_solid),
-        //     onPressed: () {
-        //       Navigator.of(context).push(
-        //         CupertinoPageRoute(
-        //           builder: (_) => const Home(),
-        //         ),
-        //       );
-        //     },
-        //   ),
-        // ),
-        middle: Text('Recommended Moovies'),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: FutureBuilder<List<Moovie>>(
-              future: _movies,
-              builder: (context, snapshot) {
-                if (snapshot.hasData) {
-                  return PageView.builder(
-                    controller: _pageController,
-                    itemCount: snapshot.data!.length,
-                    onPageChanged: (index) {
-                      setState(() {
-                        _currentPageIndex = index;
-                      });
-                    },
-                    itemBuilder: (context, index) {
-                      return MovieTile(movie: snapshot.data![index]);
-                    },
-                  );
-                } else {
-                  return const CupertinoActivityIndicator();
-                }
-              },
-            ),
-          ),
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-            child: Text(
-              _movies.toString(),
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 24.0,
-              ),
-            ),
-          ),
+    return CupertinoTabScaffold(
+      tabBar: CupertinoTabBar(
+        backgroundColor: bgColor,
+        activeColor: lightColor,
+        inactiveColor: CupertinoColors.inactiveGray,
+        items: const <BottomNavigationBarItem>[
+          BottomNavigationBarItem(
+              icon: Icon(CupertinoIcons.home), label: 'Home'),
+          BottomNavigationBarItem(
+              icon: Icon(CupertinoIcons.bookmark_solid), label: 'Watchlist'),
         ],
       ),
+      tabBuilder: (BuildContext context, int index) {
+        return CupertinoTabView(
+          builder: (BuildContext context) {
+            return _tabs[index];
+          },
+        );
+      },
     );
+  }
+}
+
+class Homie extends StatefulWidget {
+  const Homie({super.key});
+
+  @override
+  State<Homie> createState() => _HomieState();
+}
+
+class _HomieState extends State<Homie> {
+  final PageController _pageController = PageController(viewportFraction: 0.9);
+  late Future<List<Moovie>> _moovies;
+  int _currentPageIndex = 0;
+
+  @override
+  void initState() {
+    final moovies = Provider.of<MoovieProvider>(context, listen: false);
+    moovies.fetchData();
+    _moovies = Moovies.getPopularMovies();
+    super.initState();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final data = Provider.of<MoovieProvider>(context);
+    return CupertinoPageScaffold(
+        backgroundColor: bgColor,
+        navigationBar: const CupertinoNavigationBar(
+          middle: Text('Moovies', style: tsH2White),
+          backgroundColor: bgColor,
+        ),
+        child:
+            // Expanded(
+            // child:
+            // ListView.builder(
+            //   shrinkWrap: true,
+            //   scrollDirection: Axis.horizontal,
+            //   itemCount: data.moovies.length,
+            //   itemBuilder: (context, index) {
+            // if (!data.isLoading) {
+            // return
+            PageView.builder(
+          controller: _pageController,
+          scrollDirection: Axis.horizontal,
+          itemCount: data.moovies.length,
+          onPageChanged: (index) {
+            setState(() {
+              _currentPageIndex = index;
+            });
+          },
+          itemBuilder: (context, index) {
+            return MovieTile(movie: data.moovies[index]);
+          },
+        )
+        // } else {
+        //   return const CupertinoActivityIndicator();
+        // }
+        // },
+        // ),
+        // ),
+        );
+  }
+}
+
+class Watchlist extends StatefulWidget {
+  const Watchlist({super.key});
+
+  @override
+  State<Watchlist> createState() => _WatchlistState();
+}
+
+class _WatchlistState extends State<Watchlist> {
+  @override
+  Widget build(BuildContext context) {
+    return const Placeholder();
   }
 }
 
@@ -107,9 +151,12 @@ class _MovieTileState extends State<MovieTile> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: _isActive ? 700 : 600,
+      // height: MediaQuery.of(context).size.height * 0.7,
+      // width: MediaQuery.of(context).size.width * 0.8,
+      decoration:
+          BoxDecoration(backgroundBlendMode: BlendMode.darken, color: bgColor),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(
             child: PageView.builder(
@@ -117,7 +164,7 @@ class _MovieTileState extends State<MovieTile> {
               itemCount: 1,
               itemBuilder: (context, index) {
                 return Image.network(
-                  widget.movie.poster,
+                  widget.movie.posterPath,
                   fit: BoxFit.cover,
                 );
               },
@@ -144,18 +191,8 @@ class _MovieTileState extends State<MovieTile> {
                   ),
                 ),
                 Text(
-                  widget.movie.year.toString(),
-                  style: const TextStyle(
-                    color: CupertinoColors.white,
-                    fontSize: 16.0,
-                    shadows: [
-                      Shadow(
-                        color: CupertinoColors.black,
-                        blurRadius: 2.0,
-                        offset: Offset(1.0, 1.0),
-                      ),
-                    ],
-                  ),
+                  widget.movie.releaseDate.year.toString(),
+                  style: tsH1Black,
                 ),
               ],
             ),

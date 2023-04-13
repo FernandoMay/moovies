@@ -1,8 +1,14 @@
 import 'package:flutter/cupertino.dart';
-import 'package:moovies/home.dart';
+import 'package:moovies/providers.dart';
+import 'package:moovies/splash.dart';
+import 'package:provider/provider.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(MultiProvider(providers: [
+    ChangeNotifierProvider<MoovieProvider>(
+      create: (_) => MoovieProvider(),
+    ),
+  ], child: const MyApp()));
 }
 
 class MyApp extends StatelessWidget {
@@ -17,7 +23,7 @@ class MyApp extends StatelessWidget {
       theme: CupertinoThemeData(
         primaryColor: CupertinoColors.activeOrange,
       ),
-      home: Home(),
+      home: Splash(),
     );
   }
 }
