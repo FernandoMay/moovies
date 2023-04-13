@@ -76,29 +76,48 @@ class _HomieState extends State<Homie> {
           middle: Text('Moovies', style: tsH2White),
           backgroundColor: bgColor,
         ),
-        child:
-            // Expanded(
-            // child:
-            // ListView.builder(
-            //   shrinkWrap: true,
-            //   scrollDirection: Axis.horizontal,
-            //   itemCount: data.moovies.length,
-            //   itemBuilder: (context, index) {
-            // if (!data.isLoading) {
-            // return
-            PageView.builder(
+        child: PageView.builder(
           controller: _pageController,
-          scrollDirection: Axis.horizontal,
-          itemCount: data.moovies.length,
-          onPageChanged: (index) {
-            setState(() {
-              _currentPageIndex = index;
-            });
-          },
+          scrollDirection: Axis.vertical,
           itemBuilder: (context, index) {
-            return MovieTile(movie: data.moovies[index]);
+            if (index == _currentPageIndex.floor()) {
+              return Transform(
+                  transform: Matrix4.identity()
+                    ..rotateX(_currentPageIndex.toDouble() - index),
+                  child: MovieTile(movie: data.moovies[index]));
+            } else if (index == _currentPageIndex.floor() + 1) {
+              return Transform(
+                  transform: Matrix4.identity()
+                    ..rotateX(_currentPageIndex.toDouble() - index),
+                  child: MovieTile(movie: data.moovies[index]));
+            } else {
+              return MovieTile(movie: data.moovies[index]);
+            }
           },
+          itemCount: data.moovies.length,
         )
+        // Expanded(
+        // child:
+        // ListView.builder(
+        //   shrinkWrap: true,
+        //   scrollDirection: Axis.horizontal,
+        //   itemCount: data.moovies.length,
+        //   itemBuilder: (context, index) {
+        // if (!data.isLoading) {
+        // return
+        //     PageView.builder(
+        //   controller: _pageController,
+        //   scrollDirection: Axis.horizontal,
+        //   itemCount: data.moovies.length,
+        //   onPageChanged: (index) {
+        //     setState(() {
+        //       _currentPageIndex = index;
+        //     });
+        //   },
+        //   itemBuilder: (context, index) {
+        //     return MovieTile(movie: data.moovies[index]);
+        //   },
+        // )
         // } else {
         //   return const CupertinoActivityIndicator();
         // }
@@ -153,48 +172,57 @@ class _MovieTileState extends State<MovieTile> {
     return Container(
       // height: MediaQuery.of(context).size.height * 0.7,
       // width: MediaQuery.of(context).size.width * 0.8,
-      decoration:
-          BoxDecoration(backgroundBlendMode: BlendMode.darken, color: bgColor),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      decoration: const BoxDecoration(
+          backgroundBlendMode: BlendMode.darken, color: bgColor),
+      child: Stack(
         children: [
           Expanded(
-            child: PageView.builder(
-              controller: _pageController,
-              itemCount: 1,
-              itemBuilder: (context, index) {
-                return Image.network(
-                  widget.movie.posterPath,
-                  fit: BoxFit.cover,
-                );
-              },
+              child:
+                  // PageView.builder(
+                  //   controller: _pageController,
+                  //   itemCount: 1,
+                  //   itemBuilder: (context, index) {
+                  //     return
+                  Image.network(
+            widget.movie.posterPath,
+            fit: BoxFit.cover,
+          )
+              // },
+              // ),
+              ),
+          Positioned(
+            bottom: 10.0,
+            child: Container(
+              height: 300,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      bgColor.withOpacity(0.0),
+                      bgColor,
+                    ]),
+              ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.movie.title,
-                  style: const TextStyle(
-                    color: CupertinoColors.white,
-                    fontSize: 20.0,
-                    fontWeight: FontWeight.bold,
-                    shadows: [
-                      Shadow(
-                        color: CupertinoColors.black,
-                        blurRadius: 2.0,
-                        offset: Offset(1.0, 1.0),
-                      ),
-                    ],
+          Positioned(
+            bottom: 10.0,
+            child: Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.movie.releaseDate.year.toString(),
+                    style: tsH2Black,
                   ),
-                ),
-                Text(
-                  widget.movie.releaseDate.year.toString(),
-                  style: tsH1Black,
-                ),
-              ],
+                  Text(
+                    widget.movie.title,
+                    style: tsH3Black,
+                  ),
+                ],
+              ),
             ),
           ),
         ],
