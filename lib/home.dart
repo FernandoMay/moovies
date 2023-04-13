@@ -289,8 +289,11 @@ class _MovieTileState extends State<MovieTile> {
                             posterPath: widget.movie.posterPath,
                             releaseYear: widget.movie.releaseDate.year,
                             favorite: _isActive);
-                        favRef.doc("moovies").set(fmoovie).onError(
-                            (e, _) => Exception("Error writing document: $e"));
+                        favRef
+                            .doc(DateTime.now().microsecond.toString())
+                            .set(fmoovie)
+                            .onError((e, _) =>
+                                Exception("Error writing document: $e"));
                         final data = {
                           "favs": FieldValue.arrayUnion([widget.movie.id])
                         };
